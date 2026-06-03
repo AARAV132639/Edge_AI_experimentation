@@ -33,11 +33,34 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.camera.core.ImageAnalysis
 
 //phase 3: adding tensorflow lite
+import org.tensorflow.lite.support.image.TensorImage
+import androidx.camera.core.ImageProxy
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.runtime.LaunchedEffect
 
 
 import androidx.compose.ui.platform.LocalContext
 
 import com.example.edge_ai_phase_obj_detector_mob_ver.ml.EfficientdetLite0
+
+//checking imports
+import org.tensorflow.lite.support.image.ImageProcessor
+import org.tensorflow.lite.support.image.ColorSpaceType
+
+//importing imageutils
+import com.example.edge_ai_phase_obj_detector_mob_ver.toBitmap
+
+
+//data class to display box, object and confidence percentage
+import android.graphics.RectF
+import java.nio.file.WatchEvent
+
+data class Detection(
+    val Label: String,
+    val Confidence: Float,
+    val rect: RectF
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,6 +76,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CameraScreen()
 {
+
+    //-storing detections in compose state
+    var detections by remember{
+        mutableStateOf<List<Detection>>(emptyList())
+    }
+
    var isFrontCamera by remember{mutableStateOf(false)}
     key(isFrontCamera){
         CameraPreview(isFrontCamera=isFrontCamera)
@@ -62,9 +91,14 @@ fun CameraScreen()
     {
         CameraPreview(isFrontCamera=isFrontCamera)
 
+
+        //overlaying Canvas
+
+
         Button(
             onClick={isFrontCamera= !isFrontCamera},
-            modifier= Modifier.align(Alignment.BottomCenter)
+            modifier= Modifier
+                .align(Alignment.BottomCenter)
                 .padding(16.dp)
         )
         {
@@ -85,7 +119,7 @@ fun CameraPreview( isFrontCamera: Boolean)
 
     //adding the object detector block
     val context= LocalContext.current
-    val detector= remember{
+    val model= remember{
         EfficientdetLite0.newInstance(context)
     }
 
@@ -102,12 +136,50 @@ fun CameraPreview( isFrontCamera: Boolean)
                     val preview = androidx.camera.core.Preview.Builder().build()
                     val imageAnalysis= ImageAnalysis.Builder().build()
 
-                    imageAnalysis.setAnalyzer(
+                    var framecount=0 //for regulating logs and displays
+
+                    //image analyzer
+                   imageAnalysis.setAnalyzer(
                         ContextCompat.getMainExecutor(previewView.context)
                     ){
-                        imageProxy-> Log.d("Frame","${imageProxy.width}x${imageProxy.height}")
-                        imageProxy.close() // Used to releaase the image data back to the system
+                        imageProxy->
+
+                        //skip most frames because tensorflowlite is too fast
+                        framecount++
+
+                        if(framecount%15!=0){
+                            imageProxy.close()
+                            return@setAnalyzer
+                        }
+                        try{
+                            //final step of detection
+
+                            val bitmap = imageProxy.toBitmap()
+
+                            val tensorImage= TensorImage.fromBitmap(bitmap)
+
+                            val outputs= model.process(tensorImage)
+
+                            //updating detections from tensorflow
+                            if(outputs.detectionResultList.isNotEmpty()) {
+
+                                val detection= outputs.detectionResultList[0]
+
+                                Log.d(
+                                    "Detection",
+                                    detection.categoryAsString
+                                )
+                            }
+
+                            }
+                        
+                        finally{
+                            imageProxy.close()
+                        }
+
                     }
+
+
 
                     preview.surfaceProvider = previewView.surfaceProvider
 
@@ -135,6 +207,10 @@ fun CameraPreview( isFrontCamera: Boolean)
             previewView
         }
     )
+}
+
+fun ImageProxy.debugFormat(): String{
+    return "format=$format width=$width height=$height"
 }
 
 
