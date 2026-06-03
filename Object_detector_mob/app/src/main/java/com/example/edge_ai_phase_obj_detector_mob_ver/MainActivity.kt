@@ -91,7 +91,7 @@ fun CameraPreview( isFrontCamera: Boolean)
 
                     preview.surfaceProvider = previewView.surfaceProvider
 
-                   //adding switch
+                   //adding switch for camera
                     val cameraSelector=
                         if(isFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA
                     else CameraSelector.DEFAULT_BACK_CAMERA
