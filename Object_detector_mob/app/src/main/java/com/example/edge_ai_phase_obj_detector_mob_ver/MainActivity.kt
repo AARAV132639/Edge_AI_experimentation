@@ -79,8 +79,10 @@ fun CameraPreview( isFrontCamera: Boolean)
     val lifecycleOwner = LocalLifecycleOwner.current
 
     AndroidView(
-        factory={ context-> val previewView= PreviewView(context)
-            val cameraProviderFuture= ProcessCameraProvider.getInstance(context)
+        factory={ context->  PreviewView(context)},
+
+        update={previewView ->
+              val cameraProviderFuture= ProcessCameraProvider.getInstance(previewView.context)
 
             cameraProviderFuture.addListener(
                 {
@@ -106,7 +108,7 @@ fun CameraPreview( isFrontCamera: Boolean)
                         e.printStackTrace()
                     }
                 },
-                ContextCompat.getMainExecutor((context))
+                ContextCompat.getMainExecutor(previewView.context)
 
             )
             previewView
@@ -118,18 +120,3 @@ fun CameraPreview( isFrontCamera: Boolean)
 
 
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    Edge_ai_phase_obj_detector_mob_verTheme {
-        Greeting("Android")
-    }
-}
