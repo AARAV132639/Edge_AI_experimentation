@@ -4,6 +4,17 @@ plugins {
 }
 
 android {
+
+    //adding to not to compress tflite
+    androidResources{
+        noCompress.add("tflite")
+    }
+
+    //enabling ml binding
+    buildFeatures{
+        mlModelBinding= true
+    }
+
     namespace = "com.example.edge_ai_phase_obj_detector_mob_ver"
     compileSdk {
         version = release(36) {
@@ -48,6 +59,14 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
+    implementation(libs.tensorflow.lite.metadata){
+        exclude(group = "com.google.ai.edge.litert", module = "litert-support-api")
+    }
+    //lite.metadata internally pulls litert-support-api which was causing conflinct
+
+    implementation(libs.tensorflow.lite.support)
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -60,4 +79,8 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.6.1")
     implementation("androidx.camera:camera-lifecycle:1.6.1")
     implementation("androidx.camera:camera-view:1.6.1")
+
+
 }
+
+

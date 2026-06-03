@@ -1,6 +1,7 @@
 package com.example.edge_ai_phase_obj_detector_mob_ver
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -11,14 +12,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.edge_ai_phase_obj_detector_mob_ver.ui.theme.Edge_ai_phase_obj_detector_mob_verTheme
 
 //adding camera imports
 import androidx.camera.view.PreviewView
 import androidx.compose.ui.viewinterop.AndroidView
 
-import androidx.camera.core.Preview.Builder
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.core.CameraSelector
 import androidx.compose.runtime.getValue
@@ -32,7 +30,14 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
 //phase 2: imports---> enabling front camera
+import androidx.camera.core.ImageAnalysis
 
+//phase 3: adding tensorflow lite
+
+
+import androidx.compose.ui.platform.LocalContext
+
+import com.example.edge_ai_phase_obj_detector_mob_ver.ml.EfficientdetLite0
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,16 +83,31 @@ fun CameraPreview( isFrontCamera: Boolean)
 {
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    //adding the object detector block
+    val context= LocalContext.current
+    val detector= remember{
+        EfficientdetLite0.newInstance(context)
+    }
+
     AndroidView(
         factory={ context->  PreviewView(context)},
 
         update={previewView ->
               val cameraProviderFuture= ProcessCameraProvider.getInstance(previewView.context)
 
+            //camera binding code
             cameraProviderFuture.addListener(
                 {
                     val cameraProvider = cameraProviderFuture.get()
                     val preview = androidx.camera.core.Preview.Builder().build()
+                    val imageAnalysis= ImageAnalysis.Builder().build()
+
+                    imageAnalysis.setAnalyzer(
+                        ContextCompat.getMainExecutor(previewView.context)
+                    ){
+                        imageProxy-> Log.d("Frame","${imageProxy.width}x${imageProxy.height}")
+                        imageProxy.close() // Used to releaase the image data back to the system
+                    }
 
                     preview.surfaceProvider = previewView.surfaceProvider
 
@@ -102,7 +122,8 @@ fun CameraPreview( isFrontCamera: Boolean)
                         cameraProvider.bindToLifecycle(
                             lifecycleOwner,
                             cameraSelector,
-                            preview
+                            preview,
+                            imageAnalysis
                         )
                     } catch (e: Exception) {
                         e.printStackTrace()
