@@ -109,19 +109,22 @@ fun CameraScreen()
 
         Canvas(modifier= Modifier.fillMaxSize())
         {
+            val scaleX= size.width/640f
+            val scaleY= size.height/480f
+
             detections.forEach{
                 detection-> drawRect (
 
                     color = androidx.compose.ui.graphics.Color.Red,
-                
+
                     topLeft= Offset(
                         detection.rect.left,
                         detection.rect.top
                     ),
 
                     size = androidx.compose.ui.geometry.Size(
-                        detection.rect.width(),
-                        detection.rect.height()
+                        detection.rect.width()*scaleX,
+                        detection.rect.height()*scaleY
                     ),
 
                     style = Stroke(width = 5f)
