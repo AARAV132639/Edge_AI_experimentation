@@ -54,6 +54,9 @@ import com.example.edge_ai_phase_obj_detector_mob_ver.toBitmap
 
 //data class to display box, object and confidence percentage
 import android.graphics.RectF
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 
 import java.nio.file.WatchEvent
@@ -103,6 +106,29 @@ fun CameraScreen()
                     .padding(all = 8.dp)
             )
         }
+
+        Canvas(modifier= Modifier.fillMaxSize())
+        {
+            detections.forEach{
+                detection-> drawRect (
+
+                    color = androidx.compose.ui.graphics.Color.Red,
+                
+                    topLeft= Offset(
+                        detection.rect.left,
+                        detection.rect.top
+                    ),
+
+                    size = androidx.compose.ui.geometry.Size(
+                        detection.rect.width(),
+                        detection.rect.height()
+                    ),
+
+                    style = Stroke(width = 5f)
+                )
+            }
+        }
+
 
 
 
@@ -170,6 +196,17 @@ fun CameraPreview( isFrontCamera: Boolean, onDetections:(List<Detection>)->Unit)
                             val tensorImage= TensorImage.fromBitmap(bitmap)
 
                             val outputs= model.process(tensorImage)
+
+                            //to check the rectf
+                            if(outputs.detectionResultList.isNotEmpty())
+                            {
+                                Log.d(
+                                    "Box",
+                                    outputs.detectionResultList[0]
+                                        .locationAsRectF
+                                        .toString()
+                                )
+                            }
 
                             //updating detections from tensorflow
                             val detectedObjects = outputs.detectionResultList.filter{
