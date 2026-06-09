@@ -54,6 +54,8 @@ import com.example.edge_ai_phase_obj_detector_mob_ver.toBitmap
 
 //data class to display box, object and confidence percentage
 import android.graphics.RectF
+
+
 import java.nio.file.WatchEvent
 
 data class Detection(
@@ -68,9 +70,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CameraScreen()
-                }
-            }
         }
+    }
+}
 
 
 @Composable
@@ -82,17 +84,26 @@ fun CameraScreen()
         mutableStateOf<List<Detection>>(emptyList())
     }
 
-   var isFrontCamera by remember{mutableStateOf(false)}
-    key(isFrontCamera){
-        CameraPreview(isFrontCamera=isFrontCamera)
-    }
+    var isFrontCamera by remember{mutableStateOf(false)}
+
 
     Box(modifier= Modifier.fillMaxSize())
     {
-        CameraPreview(isFrontCamera=isFrontCamera)
+        CameraPreview(isFrontCamera=isFrontCamera, onDetections = {detections=it})
 
 
-        //overlaying Canvas
+       val bestDetection = detections.maxByOrNull { it.Confidence }
+
+        if(bestDetection!=null)
+        {
+            Text(
+                text = "${bestDetection.Label}${(bestDetection.Confidence*100).toInt()}%",
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(all = 8.dp)
+            )
+        }
+
 
 
         Button(
@@ -113,7 +124,7 @@ fun CameraScreen()
 
 // New function for camera working
 @Composable
-fun CameraPreview( isFrontCamera: Boolean)
+fun CameraPreview( isFrontCamera: Boolean, onDetections:(List<Detection>)->Unit)
 {
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -127,7 +138,7 @@ fun CameraPreview( isFrontCamera: Boolean)
         factory={ context->  PreviewView(context)},
 
         update={previewView ->
-              val cameraProviderFuture= ProcessCameraProvider.getInstance(previewView.context)
+            val cameraProviderFuture= ProcessCameraProvider.getInstance(previewView.context)
 
             //camera binding code
             cameraProviderFuture.addListener(
@@ -139,10 +150,10 @@ fun CameraPreview( isFrontCamera: Boolean)
                     var framecount=0 //for regulating logs and displays
 
                     //image analyzer
-                   imageAnalysis.setAnalyzer(
+                    imageAnalysis.setAnalyzer(
                         ContextCompat.getMainExecutor(previewView.context)
                     ){
-                        imageProxy->
+                            imageProxy->
 
                         //skip most frames because tensorflowlite is too fast
                         framecount++
@@ -161,18 +172,20 @@ fun CameraPreview( isFrontCamera: Boolean)
                             val outputs= model.process(tensorImage)
 
                             //updating detections from tensorflow
-                            if(outputs.detectionResultList.isNotEmpty()) {
-
-                                val detection= outputs.detectionResultList[0]
-
-                                Log.d(
-                                    "Detection",
-                                    detection.categoryAsString
+                            val detectedObjects = outputs.detectionResultList.filter{
+                                it.scoreAsFloat>0.5f
+                            }
+                                .map{
+                                Detection(
+                                    Label = it.categoryAsString,
+                                    Confidence = it.scoreAsFloat,
+                                    rect = it.locationAsRectF
                                 )
                             }
+                            onDetections(detectedObjects)
 
-                            }
-                        
+                        }
+
                         finally{
                             imageProxy.close()
                         }
@@ -183,10 +196,10 @@ fun CameraPreview( isFrontCamera: Boolean)
 
                     preview.surfaceProvider = previewView.surfaceProvider
 
-                   //adding switch for camera
+                    //adding switch for camera
                     val cameraSelector=
                         if(isFrontCamera) CameraSelector.DEFAULT_FRONT_CAMERA
-                    else CameraSelector.DEFAULT_BACK_CAMERA
+                        else CameraSelector.DEFAULT_BACK_CAMERA
 
                     try {
                         cameraProvider.unbindAll()
