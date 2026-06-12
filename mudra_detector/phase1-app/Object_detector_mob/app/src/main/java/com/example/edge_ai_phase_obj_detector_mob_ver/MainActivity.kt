@@ -57,6 +57,9 @@ import android.graphics.RectF
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
+import com.example.edge_ai_phase_obj_detector_mob_ver.ml.Mudra
+import org.tensorflow.lite.DataType
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 
 
 import java.nio.file.WatchEvent
@@ -95,7 +98,7 @@ fun CameraScreen()
         CameraPreview(isFrontCamera=isFrontCamera, onDetections = {detections=it})
 
 
-       val bestDetection = detections.maxByOrNull { it.Confidence }
+        val bestDetection = detections.maxByOrNull { it.Confidence }
 
         if(bestDetection!=null)
         {
@@ -113,22 +116,22 @@ fun CameraScreen()
             val scaleY= size.height/480f
 
             detections.forEach{
-                detection-> drawRect (
+                    detection-> drawRect (
 
-                    color = androidx.compose.ui.graphics.Color.Red,
+                color = androidx.compose.ui.graphics.Color.Red,
 
-                    topLeft= Offset(
-                        detection.rect.left,
-                        detection.rect.top
-                    ),
+                topLeft= Offset(
+                    detection.rect.left,
+                    detection.rect.top
+                ),
 
-                    size = androidx.compose.ui.geometry.Size(
-                        detection.rect.width()*scaleX,
-                        detection.rect.height()*scaleY
-                    ),
+                size = androidx.compose.ui.geometry.Size(
+                    detection.rect.width()*scaleX,
+                    detection.rect.height()*scaleY
+                ),
 
-                    style = Stroke(width = 5f)
-                )
+                style = Stroke(width = 5f)
+            )
             }
         }
 
@@ -159,9 +162,16 @@ fun CameraPreview( isFrontCamera: Boolean, onDetections:(List<Detection>)->Unit)
 
     //adding the object detector block
     val context= LocalContext.current
-    val classifier = remember { Mudra_classifier(context) }
+    val extractor = remember { HandleLnadmarksExtractor(context) }
 
+    val model = Mudra.newInstance(context)
 
+    val labels = remember {
+        context.assets
+            .open("labels.txt")
+            .bufferedReader()
+            .readLines()
+    }
 
     AndroidView(
         factory={ context->  PreviewView(context)},
@@ -196,10 +206,40 @@ fun CameraPreview( isFrontCamera: Boolean, onDetections:(List<Detection>)->Unit)
 
                             val bitmap = imageProxy.toBitmap()
 
-                           val (label, confidence) = classifier.classify(bitmap)
+                           val landmarks = extractor.extract(bitmap)
+
+                            if(landmarks!=null)
+                            {
+                                val inputFeature0 = TensorBuffer.createFixedSize(
+                                    intArrayOf(1,63),
+                                    DataType.FLOAT32
+                                )
+
+
+                                inputFeature0.loadArray(landmarks)
+
+                                val outputs = model.process(inputFeature0)
+
+                                val probability = outputs.outputFeature0AsTensorBuffer.floatArray
+
+
+                                //probability to labels
+                                val maxIndex = probability.indices.maxByOrNull { probability[it] }?:-1
+
+                                if(maxIndex>=0)
+                                {
+                                    val label= labels[maxIndex]
+
+                                    val confidence = probability[maxIndex]
+
+                                    Log.d(
+                                        "Mudra", "$label${(confidence*100).toInt()}%"
+                                    )
+                                }
+                            }
 
                             //updating UI sate
-                            onDetections(listOf(Detection(Label = label,Confidence = confidence, rect= RectF(0f,0f,0f,0f))))
+                           // onDetections(listOf(Detection(Label = label,Confidence = confidence, rect= RectF(0f,0f,0f,0f))))
 
                         }
 
