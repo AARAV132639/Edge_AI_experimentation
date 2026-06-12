@@ -70,6 +70,11 @@ data class Detection(
     val rect: RectF
 )
 
+data class HandData(
+    val landmarks: FloatArray,
+    val rect: RectF
+)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -206,14 +211,17 @@ fun CameraPreview( isFrontCamera: Boolean, onDetections:(List<Detection>)->Unit)
 
                             val bitmap = imageProxy.toBitmap()
 
-                           val landmarks = extractor.extract(bitmap)
+                           val handData = extractor.extract(bitmap)
 
-                            if(landmarks!=null)
+                            if(handData!=null)
                             {
                                 val inputFeature0 = TensorBuffer.createFixedSize(
                                     intArrayOf(1,63),
                                     DataType.FLOAT32
                                 )
+
+                                val landmarks= handData.landmarks
+                                val handRect= handData.rect
 
 
                                 inputFeature0.loadArray(landmarks)
@@ -231,6 +239,17 @@ fun CameraPreview( isFrontCamera: Boolean, onDetections:(List<Detection>)->Unit)
                                     val label= labels[maxIndex]
 
                                     val confidence = probability[maxIndex]
+
+                                    //updating ui
+                                    onDetections(
+                                        listOf(
+                                            Detection(
+                                                Label = label,
+                                                Confidence = confidence,
+                                                rect = handRect
+                                            )
+                                        )
+                                    )
 
                                     Log.d(
                                         "Mudra", "$label${(confidence*100).toInt()}%"

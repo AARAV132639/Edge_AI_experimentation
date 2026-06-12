@@ -1,6 +1,7 @@
 package com.example.edge_ai_phase_obj_detector_mob_ver
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.RectF
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmark
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
@@ -28,7 +29,7 @@ class HandleLnadmarksExtractor(context: Context)
         handLandmarker= HandLandmarker.createFromOptions(context, options)
     }
 
-    fun extract(bitmap: Bitmap): FloatArray?{
+    fun extract(bitmap: Bitmap): HandData?{
         val mpImage = BitmapImageBuilder(bitmap).build()
 
         val result = handLandmarker.detect(mpImage)
@@ -39,6 +40,13 @@ class HandleLnadmarksExtractor(context: Context)
 
         val landmarks = result.landmarks()[0]
 
+        //adding RectF function
+        var minX= Float.MAX_VALUE
+        var minY = Float.MIN_VALUE
+
+        var maxX= Float.MIN_VALUE
+        var maxY= Float.MAX_VALUE
+
         val input = FloatArray(63)
 
         var index =0
@@ -48,7 +56,22 @@ class HandleLnadmarksExtractor(context: Context)
             input[index++] = lm.x()
             input[index++]= lm.y()
             input[index++]= lm.z()
+
+            minX = minOf(minX, lm.x())
+            minY = minOf(minY, lm.y())
+            maxX = maxOf(minX, lm.x())
+            maxY = maxOf(maxY, lm.y())
         }
-        return input
+
+        val handRect = RectF(
+            minX*bitmap.width,
+            minY*bitmap.height,
+            maxX*bitmap.width,
+            maxY*bitmap.height
+        )
+        return HandData(
+            landmarks=input,
+            rect= handRect
+        )
     }
 }
