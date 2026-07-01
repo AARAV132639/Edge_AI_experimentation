@@ -32,22 +32,32 @@ The project includes Google's pre-trained EfficientDet Lite0 Tensorflow Lite Mod
 ## Architecture
 
 Camera
+
    ↓
 CameraX
+
    ↓
+
 ImageProxy
+
    ↓
 Bitmap Conversion
+
    ↓
 TensorImage
+
    ↓
 EfficientDet Lite0
+
    ↓
 Detection Results
+
    ↓
 Compose Overlay
 
 ## Screen shots
+
+![alt text](Object_detector.jpeg) ![alt text](Object_detector_2.jpeg)
 
 ## Challenges
 

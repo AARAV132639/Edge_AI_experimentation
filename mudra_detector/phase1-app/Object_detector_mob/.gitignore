@@ -20,6 +20,7 @@ local.properties
 /.gradle
 /.idea
 
+*.hprof
 
 gradle.properties
 
